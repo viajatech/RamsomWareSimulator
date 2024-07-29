@@ -15,3 +15,7 @@ VERSIÓN KIVY [C]
 VERSIÓN KIVY [B]
 -----------
 ![](https://github.com/viajatech/RansomWareSimulator/blob/main/VERSION%20KIVY%20B.png)
+-----------
+VERSIÓN KIVY [A]
+-----------
+![](https://github.com/viajatech/RansomWareSimulator/blob/main/Version%20Kivy%20A.png)
