@@ -11,3 +11,5 @@ Script con fines educativos. Copyright Disclaimer: - Under section 107 of the co
 VERSIÓN KIVY [C]
 -----------
 ![](https://github.com/viajatech/RansomWareSimulator/blob/main/GUI%20Kivy.png)
+-----------
+![](https://github.com/viajatech/RansomWareSimulator/blob/main/VERSION%20KIVY%20B.png)
