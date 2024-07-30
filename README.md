@@ -2,6 +2,8 @@ Simulador de Ransomware que cifra y bloquea archivos pidiendo una contraseña pa
 ------
 Versión Beta (Experimental) programa en desarrollo,se recomienda usar bajo discreción y bajo tu propio riesgo.
 -----------
+Se recomienda usar con fines educativos (Para aprender)
+-----------
 VERSIÓN TKINTER
 -----------
 ![](https://github.com/viajatech/RansomWareSimulator/blob/main/Ransomware%20Simulator.png)
