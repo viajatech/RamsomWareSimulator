@@ -1,6 +1,6 @@
 Simulador de Ransomware que cifra y bloquea archivos pidiendo una contraseña para recuperarlos.
 ------
-Versión Beta
+Versión Beta (Experimental) programa en desarrollo,se recomienda usar bajo discreción y bajo tu propio riesgo.
 -----------
 VERSIÓN TKINTER
 -----------
